@@ -1,0 +1,53 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [native, wasm]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install MoonBit
+        uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+
+      - name: moon version
+        run: moon version --all
+
+      - name: moon update
+        run: moon update
+
+      - name: moon check
+        run: moon check --deny-warn --target ${{ matrix.target }}
+
+      - name: format and interface check
+        run: |
+          moon fmt
+          moon info --target ${{ matrix.target }}
+          git diff --exit-code
+
+      - name: test with SQLite and PostgreSQL
+        run: |
+          ulimit -s 8176
+          sh scripts/test-postgres.sh ${{ matrix.target }}
+
+      - name: package check
+        run: moon package --list

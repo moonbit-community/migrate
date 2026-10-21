@@ -1,0 +1,68 @@
+name: publish-package
+run-name: publish to mooncakes
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-package
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/check.yml
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install MoonBit
+        uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+
+      - name: moon version
+        run: moon version --all
+
+      - name: moon update
+        run: moon update
+
+      - name: check release version
+        id: release
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' moon.mod)"
+          test -n "$version"
+          tag="v$version"
+          git check-ref-format "refs/tags/$tag"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "Version tag already exists: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: publish
+        env:
+          SECRET: ${{ secrets.MOONCAKES_MOONBIT_COMMUNITY_TOKEN }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "MOONCAKES_MOONBIT_COMMUNITY_TOKEN is not configured for this repository" >&2
+            exit 1
+          fi
+          credentials="$HOME/.moon/credentials.json"
+          umask 077
+          printf '%s\n' "$SECRET" > "$credentials"
+          trap 'rm -f "$credentials"' EXIT
+          moon publish
+
+      - name: tag published commit
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$RELEASE_TAG"

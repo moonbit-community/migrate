@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/migrate"
+
+import {
+  "moonbit-community/postgres/client",
+  "moonbit-community/postgres/pgpool",
+  "moonbit-community/sqlite3",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror MigrationError {
+  MissingMigration(String)
+  HistoryMismatch(String, String)
+  UnknownVersion(String)
+  TargetNotApplied(String)
+} derive(Eq, @debug.Debug)
+pub fn MigrationError::equal(Self, Self) -> Bool
+pub fn MigrationError::not_equal(Self, Self) -> Bool
+pub fn MigrationError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Migration[T] {
+  upgrade : async (T) -> Unit
+  downgrade : async (T) -> Unit
+}
+
+type Migrator[T]
+pub fn[T] Migrator::Migrator(Map[String, Migration[T]], table? : String) -> Self[T]
+pub async fn[T : Migrate] Migrator::revert(Self[T], T, version? : String) -> Unit
+pub async fn[T : Migrate] Migrator::run(Self[T], T) -> Unit
+
+// Type aliases
+
+// Traits
+pub(open) trait Migrate {
+  async fn ensure_migration_table(Self, table~ : String) -> Unit
+  async fn list_migrations(Self, table~ : String) -> Array[String]
+  async fn record_migration(Self, String, Bool, table~ : String) -> Unit
+}
+pub impl Migrate for @client.Client
+pub impl Migrate for @client.Transaction
+pub impl Migrate for @pgpool.Transaction
+pub impl Migrate for @sqlite3.Connection

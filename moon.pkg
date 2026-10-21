@@ -1,0 +1,14 @@
+import {
+  "moonbit-community/sqlite3",
+  "moonbit-community/postgres/client" @pg,
+  "moonbit-community/postgres/pgpool",
+  "moonbitlang/core/range",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+} for "test"
+
+supported_targets = "native+wasm"
