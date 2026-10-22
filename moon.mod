@@ -8,7 +8,7 @@ repository = "https://github.com/moonbit-community/migrate"
 
 license = "Apache-2.0"
 
-keywords = [ "migration", "sqlite", "postgresql" ]
+keywords = [ "migration", "database", "sql", "sqlite", "postgresql" ]
 
 preferred_target = "native"
 
