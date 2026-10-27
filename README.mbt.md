@@ -7,6 +7,12 @@ when requested.
 
 ## Usage
 
+Start with an `initial-create` migration whose upgrade creates the initial
+application schema. Add later schema changes as subsequent migrations. When
+rebuilding a service with a fresh database, run this same migration history to
+initialize the schema. Creating the schema separately before running migrations
+can conflict with migrations that create or alter the same tables.
+
 Import `moonbit-community/migrate` as `migrate` and
 `moonbit-community/sqlite3` as `sqlite3` in `moon.pkg`.
 
@@ -16,40 +22,59 @@ async test "SQLite quick start" {
   let db = @sqlite3.Connection::open_async(":memory:")
   defer db.close()
   let migrator : @migrate.Migrator[@sqlite3.Connection] = @migrate.Migrator({
-    "create_users": {
+    "initial-create": {
       upgrade: db => {
         let statement = db.prepare_async(
           "CREATE TABLE users(id INTEGER PRIMARY KEY)",
         )
         defer statement.finalize()
-        statement.step_async() |> ignore
+        let _ = statement.step_async()
+      },
+      downgrade: _ => {
+        fail("cannot revert initial-create: preserve schema and data")
+      },
+    },
+    "create_posts": {
+      upgrade: db => {
+        let statement = db.prepare_async(
+          "CREATE TABLE posts(id INTEGER PRIMARY KEY)",
+        )
+        defer statement.finalize()
+        let _ = statement.step_async()
       },
       downgrade: db => {
-        let statement = db.prepare_async("DROP TABLE users")
+        let statement = db.prepare_async("DROP TABLE posts")
         defer statement.finalize()
-        statement.step_async() |> ignore
+        let _ = statement.step_async()
       },
     },
   })
   migrator.run(db)
   assert_eq(
     @migrate.Migrate::list_migrations(db, table="_moonbit_migrations"),
-    ["create_users"],
+    ["initial-create", "create_posts"],
   )
-  migrator.revert(db)
+  migrator.revert(db, version="initial-create")
   assert_eq(
     @migrate.Migrate::list_migrations(db, table="_moonbit_migrations"),
-    [],
+    ["initial-create"],
   )
 }
 ```
+
+Make the `initial-create` downgrade call `fail("...")` so the migration cannot
+be reverted and its tables and data cannot be accidentally dropped by a rollback.
+Use `revert(db, version="initial-create")` to undo only later migrations while
+keeping the initial schema. An untargeted `revert(db)` undoes later migrations
+first, then fails at `initial-create`, leaving it applied.
 
 Map keys are migration IDs. Migrations run in map insertion order.
 Use `Migrator(migrations, table="app_migrations")` to choose a migrations table.
 The default is `_moonbit_migrations`. The name is a single table identifier.
 
 `run(db)` applies pending migrations. `revert(db, version="id")` reverses later
-migrations and keeps the target applied. Omit `version` to revert everything.
+migrations and keeps the target applied. Omit `version` to attempt reverting
+everything; a failing downgrade stops the rollback.
 An optional value can be forwarded with `revert(db, version?)`, where `None`
 also means revert everything. An empty string is an ordinary ID.
 
