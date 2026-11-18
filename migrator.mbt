@@ -81,7 +81,8 @@ pub async fn[T : Migrate] Migrator::revert(
   if version is Some(version) && target > applied {
     raise MigrationError::TargetNotApplied(version)
   }
-  for index in @range.iter(from=applied - 1, to=target, step=-1, inclusive=true) {
+  for
+    index in @range.iter(start=applied - 1, end=target, step=-1, inclusive=true) {
     let (id, migration) = self.migrations[index]
     (migration.downgrade)(db)
     db.record_migration(id, false, table=self.table)

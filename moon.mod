@@ -1,6 +1,6 @@
 name = "moonbit-community/migrate"
 
-version = "0.1.3"
+version = "0.1.6"
 
 readme = "README.mbt.md"
 
@@ -15,7 +15,7 @@ preferred_target = "native"
 description = "Database migrations for MoonBit with SQLite and PostgreSQL support."
 
 import {
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.7",
   "moonbit-community/postgres@0.1.3",
-  "moonbit-community/sqlite3@0.2.3",
+  "moonbit-community/sqlite3@0.2.5",
 }

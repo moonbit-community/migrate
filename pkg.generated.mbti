@@ -11,12 +11,13 @@ import {
 // Values
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror MigrationError {
   MissingMigration(String)
   HistoryMismatch(String, String)
   UnknownVersion(String)
   TargetNotApplied(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn MigrationError::equal(Self, Self) -> Bool
 pub fn MigrationError::not_equal(Self, Self) -> Bool
 pub fn MigrationError::to_repr(Self) -> @debug.Repr
