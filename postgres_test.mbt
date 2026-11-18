@@ -8,6 +8,9 @@ fn postgres_test_port() -> Int32? raise {
 }
 
 ///|
+// Client::close still combines cancellable shutdown with cleanup.
+// https://github.com/moonbit-community/postgres.mbt/issues/31
+#warnings("-cancellable_defer")
 async fn with_postgres_test_schema(
   port : Int32,
   name : String,
